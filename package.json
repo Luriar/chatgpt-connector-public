@@ -1,0 +1,44 @@
+{
+  "name": "webjjonku",
+  "version": "2.1.0-beta.5",
+  "description": "웹쫀쿠 — ChatGPT 웹을 Codex/Claude Code급 코딩 에이전트로 만드는 로컬 MCP 브리지",
+  "type": "module",
+  "bin": {
+    "webjjonku": "src/index.js",
+    "chatgpt-delegate": "scripts/chatgpt-delegate.mjs"
+  },
+  "scripts": {
+    "start": "node src/index.js --http",
+    "stdio": "node src/index.js --stdio",
+    "daemon": "node scripts/daemon.js",
+    "status": "node scripts/status.js",
+    "plugin:package": "node scripts/package-plugin.js",
+    "coordinator": "node scripts/coordinator-server.js",
+    "browser-worker": "node scripts/browser-worker.js",
+    "test": "node scripts/smoke-test.js",
+    "test:parity": "node scripts/parity-test.js",
+    "test:work": "node scripts/work-parity-test.js",
+    "test:session": "node scripts/session-resource-lock-test.js && node scripts/resource-lock-lease-regression-test.js && node scripts/http-session-isolation-test.js && node scripts/windows-proxy-regression-test.js && node scripts/windows-recovery-regression-test.js && node scripts/worker-pool-regression-test.js && node scripts/workspace-lineage-regression-test.js && node scripts/exec-timeout-resource-test.js && node scripts/task-command-timeout-regression-test.js && node scripts/coordinator-session-runtime-regression-test.js && node scripts/http-session-idle-regression-test.js && node scripts/performance-recovery-regression-test.js && node scripts/transport-telemetry-regression-test.js && node scripts/coordinator-device-alias-regression-test.js",
+    "test:delegation": "node scripts/delegation-protocol-test.js",
+    "test:security": "node scripts/self-review-security-test.js && node scripts/state-concurrency-test.js && node scripts/state-durability-test.js && node scripts/coordinator-durability-test.js && node scripts/coordinator-runat-resume-regression-test.js && node scripts/work-policy-test.js && node scripts/scheduler-resilience-test.js && node scripts/session-resource-lock-test.js",
+    "validate:external": "node scripts/astra-external-validation.js",
+    "tunnel": "node scripts/tunnel.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "croner": "^10.0.1",
+    "exceljs": "^4.4.0",
+    "jszip": "^3.10.2",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.3.289",
+    "playwright-core": "^1.63.0",
+    "zod": "^3.24.0"
+  },
+  "license": "MIT",
+  "overrides": {
+    "uuid": "11.1.1"
+  }
+}

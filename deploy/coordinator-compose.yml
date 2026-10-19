@@ -1,0 +1,29 @@
+services:
+  coordinator:
+    build:
+      context: ..
+      dockerfile: deploy/coordinator.Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8765:8765"
+    environment:
+      WEBJJONKU_COORDINATOR_TOKEN: "${WEBJJONKU_COORDINATOR_TOKEN:?set a long random token}"
+    volumes:
+      - webjjonku-coordinator:/data
+
+  browser-worker:
+    build:
+      context: ..
+      dockerfile: deploy/browser-worker.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - coordinator
+    environment:
+      WEBJJONKU_COORDINATOR_URL: "http://coordinator:8765"
+      WEBJJONKU_COORDINATOR_TOKEN: "${WEBJJONKU_COORDINATOR_TOKEN:?set a long random token}"
+      WEBJJONKU_BROWSER_WORKER_ID: "${WEBJJONKU_BROWSER_WORKER_ID:-cloud-browser-1}"
+      WEBJJONKU_BROWSER_EXECUTABLE: "/usr/bin/chromium"
+    shm_size: "1gb"
+
+volumes:
+  webjjonku-coordinator:

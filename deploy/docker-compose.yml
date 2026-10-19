@@ -1,0 +1,28 @@
+# 웹쫀쿠 원격 배포 스택: 서버 + Cloudflare 터널
+# 사용: cd deploy && docker compose up -d --build
+# (Oracle 프리티어 VPS에서 이대로 돌리면 24시간 웹쫀쿠 완성)
+services:
+  webjjonku:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    container_name: webjjonku
+    restart: unless-stopped
+    volumes:
+      - ../..:/workspace          # 승인 루트로 쓸 폴더 (필요에 맞게 변경)
+      - wjk-state:/workspace/.webjjonku
+    ports:
+      - "127.0.0.1:8747:8747"     # 로컬호스트만 노출 (외부 공개는 터널이 담당)
+
+  # 무료 퀵 터널 (URL은 `docker compose logs tunnel`에서 확인)
+  # 고정 URL을 원하면 Cloudflare 계정 터널 또는 OpenAI Secure MCP Tunnel 사용 (docs/ORACLE_DEVSPACE.md 참고)
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: webjjonku-tunnel
+    restart: unless-stopped
+    command: tunnel --url http://webjjonku:8747
+    depends_on:
+      - webjjonku
+
+volumes:
+  wjk-state:

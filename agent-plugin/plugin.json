@@ -1,0 +1,24 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "webjjonku-v2",
+  "version": "2.0.0",
+  "description": "Local agent bridge for coding, browser automation, documents, schedules, approvals, SaaS APIs, and system workflows.",
+  "author": {
+    "name": "webjjonku"
+  },
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Webjjonku V2",
+        "shortDescription": "Local agent bridge for advanced workflows",
+        "longDescription": "Use webjjonku to work with approved local files, commands, browser automation, documents, schedules, remote systems, and connected REST APIs.",
+        "developerName": "webjjonku",
+        "category": "Productivity",
+        "capabilities": [
+          "Interactive"
+        ],
+        "defaultPrompt": "Use Webjjonku V2 to carry out this task end to end."
+      }
+    }
+  }
+}

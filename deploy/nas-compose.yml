@@ -1,0 +1,166 @@
+services:
+  coordinator:
+    # Pin the verified patched image so `up --no-build` never reverts to an old build.
+    # `docker compose build` still rebuilds this tag from the tracked source.
+    image: chatgpt-connector-coordinator:2.1.0-beta.5
+    build:
+      context: ..
+      dockerfile: deploy/coordinator.Dockerfile
+    container_name: chatgpt-coordinator
+    restart: unless-stopped
+    environment:
+      WEBJJONKU_DURABLE_FSYNC: "0"
+      WEBJJONKU_MAX_TERMINAL_RESULT_BYTES: "32768"
+      WEBJJONKU_MAX_EPHEMERAL_TERMINAL_TASKS: "180"
+      WEBJJONKU_COORDINATOR_TICK_MS: "2000"
+      WEBJJONKU_COORDINATOR_STATE_KEY_FILE: "/secrets/coordinator-state.key"
+      WEBJJONKU_COORDINATOR_TOKEN: "${WEBJJONKU_COORDINATOR_TOKEN:?set an admin token}"
+    volumes:
+      - ${WEBJJONKU_DATA_DIR:-./runtime}/coordinator:/data
+      - ${WEBJJONKU_DATA_DIR:-./runtime}/secrets/coordinator-state.key:/secrets/coordinator-state.key:ro
+    ports:
+      - "${WEBJJONKU_BIND_IP:-127.0.0.1}:8780:8765"
+    networks: [worknet]
+
+  connector:
+    image: chatgpt-connector:2.1.0-beta.5
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    container_name: chatgpt-connector
+    restart: unless-stopped
+    depends_on: [coordinator]
+    environment:
+      WEBJJONKU_COORDINATOR_URL: "http://coordinator:8765"
+      WEBJJONKU_COORDINATOR_TOKEN: "${WEBJJONKU_CONNECTOR_TOKEN:?set a scoped connector token}"
+      WEBJJONKU_RUNTIME_PROFILE: "nas"
+      WEBJJONKU_COORDINATOR_DEVICE_ID: "nas-mcp"
+      WEBJJONKU_COORDINATOR_FORCE_ENV: "1"
+      WEBJJONKU_COORDINATOR_ALLOW_PRIVATE: "1"
+      WEBJJONKU_COORDINATOR_ALLOW_INSECURE_HTTP: "1"
+      WEBJJONKU_DEFAULT_BROWSER_WORKER: "browser-nas"
+      WEBJJONKU_WINDOWS_TOOL_PROXY: "1"
+      WEBJJONKU_WINDOWS_TOOL_DEVICE_ID: "windows-worker"
+      WEBJJONKU_DURABLE_FSYNC: "0"
+      WEBJJONKU_MCP_JSON_RESPONSE: "1"
+    volumes:
+      - ${WEBJJONKU_NAS_WORKSPACE:-..}:/workspace
+      - ${WEBJJONKU_DATA_DIR:-./runtime}/connector-state:/workspace/.webjjonku/runtimes/nas
+      - ${WEBJJONKU_FILE_ROOT:-./runtime/files}:/nas
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "${WEBJJONKU_BIND_IP:-127.0.0.1}:8747:8747"
+    networks: [worknet]
+
+  browser-nas:
+    # Includes safe browser lifecycle recovery and nonblocking lease heartbeat.
+    image: chatgpt-connector-browser:2.1.0-beta.5
+    build:
+      context: ..
+      dockerfile: deploy/browser-worker.Dockerfile
+    container_name: chatgpt-browser-nas
+    restart: unless-stopped
+    depends_on: [coordinator]
+    shm_size: "1gb"
+    environment:
+      WEBJJONKU_COORDINATOR_URL: "http://coordinator:8765"
+      WEBJJONKU_COORDINATOR_TOKEN: "${WEBJJONKU_BROWSER_NAS_TOKEN:?set a scoped browser token}"
+      WEBJJONKU_COORDINATOR_ALLOW_PRIVATE: "1"
+      WEBJJONKU_COORDINATOR_ALLOW_INSECURE_HTTP: "1"
+      WEBJJONKU_BROWSER_PRIVATE_ALLOWLIST: "coordinator"
+      WEBJJONKU_BROWSER_WORKER_ID: "browser-nas"
+      WEBJJONKU_BROWSER_PROFILE_DIR: "/browser-profile"
+      WEBJJONKU_BROWSER_DOWNLOAD_DIR: "/browser-profile/downloads"
+      WEBJJONKU_BROWSER_FILE_ROOTS: "/nas:/browser-profile"
+      WEBJJONKU_BROWSER_EXECUTABLE: "/usr/bin/chromium"
+      WEBJJONKU_BROWSER_HEADLESS: "0"
+      WEBJJONKU_BROWSER_KEEP_OPEN: "1"
+      WEBJJONKU_BROWSER_IDLE_CLOSE_MS: "600000"
+      WEBJJONKU_BROWSER_CDP_URL: ""
+      WEBJJONKU_BROWSER_POLL_MS: "2000"
+      WEBJJONKU_BROWSER_CHROMIUM_SANDBOX: "0"
+      DISPLAY: ":99"
+    volumes:
+      - ${WEBJJONKU_DATA_DIR:-./runtime}/browser-profile:/browser-profile
+      - ${WEBJJONKU_FILE_ROOT:-./runtime/files}:/nas
+    ports:
+      - "${WEBJJONKU_BIND_IP:-127.0.0.1}:6080:6080"
+    networks: [worknet]
+
+  nfs-shutdown-guard:
+    profiles: ["qnap-host-tuning"]
+    image: chatgpt-connector:2.1.0-beta.5
+    container_name: chatgpt-nfs-shutdown-guard
+    restart: unless-stopped
+    pid: host
+    privileged: true
+    network_mode: none
+    read_only: true
+    stop_grace_period: 15s
+    entrypoint: ["/bin/sh", "/guard.sh"]
+    volumes:
+      - ${WEBJJONKU_NAS_WORKSPACE:-..}/scripts/nas-nfs-shutdown-guard.sh:/guard.sh:ro
+
+  quiet-governor:
+    profiles: ["qnap-host-tuning"]
+    image: chatgpt-connector:2.1.0-beta.5
+    container_name: chatgpt-quiet-governor
+    restart: unless-stopped
+    privileged: true
+    network_mode: none
+    read_only: true
+    pids_limit: 8
+    entrypoint: ["/bin/sh", "-lc"]
+    command:
+      - |
+        set -e
+        grep -qw schedutil /hostsys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors
+        printf '%s\n' schedutil | tee /hostsys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_governor >/dev/null
+        exec sleep infinity
+    volumes:
+      - /sys:/hostsys
+
+  health-monitor:
+    image: chatgpt-connector:2.1.0-beta.5
+    container_name: chatgpt-health-monitor
+    restart: unless-stopped
+    read_only: true
+    entrypoint: ["node", "/app/scripts/nas-health-monitor.mjs"]
+    environment:
+      MONITOR_LOG: "/monitor/health.jsonl"
+      MONITOR_NFS_HOST: "${MONITOR_NFS_HOST:-}"
+      MONITOR_INTERVAL_MS: "60000"
+      MONITOR_HEALTHY_PERSIST_MS: "3600000"
+      MONITOR_MAX_BYTES: "5000000"
+      MONITOR_AUTO_RESTART_CONNECTOR: "1"
+      MONITOR_CONNECTOR_RESTART_AFTER: "3"
+      MONITOR_CONNECTOR_RESTART_FORCE_AFTER: "10"
+      MONITOR_CONNECTOR_CONFIRM_TIMEOUT_MS: "30000"
+      MONITOR_CONNECTOR_RESTART_COOLDOWN_MS: "600000"
+      WEBJJONKU_COORDINATOR_TOKEN: "${WEBJJONKU_CONNECTOR_TOKEN}"
+    volumes:
+      - ${WEBJJONKU_DATA_DIR:-./runtime}/monitor:/monitor
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks: [worknet]
+
+  tailscale:
+    image: tailscale/tailscale:stable
+    container_name: chatgpt-tailscale
+    profiles: ["tailscale"]
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "false"
+      TS_HOSTNAME: "${WEBJJONKU_TAILSCALE_HOSTNAME:-chatgpt-connector}"
+      TS_EXTRA_ARGS: "--accept-dns=false"
+    volumes:
+      - ${WEBJJONKU_NAS_WORKSPACE:-..}/deploy/runtime/tailscale:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+
+networks:
+  worknet:
+    name: chatgpt-work

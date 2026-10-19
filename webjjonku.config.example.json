@@ -1,0 +1,32 @@
+{
+  "roots": ["C:/dev/my-project"],
+  "readOnly": false,
+  "db": { "allowWrite": false, "connections": {} },
+  "remotes": {},
+  "logs": { "sources": {} },
+  "workers": { "max": 8 },
+  "effortDefault": "medium",
+  "desktop": { "enabled": true },
+  "browser": { "enabled": true, "headless": true, "executablePath": null },
+  "exec": { "secureImage": "node:22-slim" },
+  "sandbox": { "defaultImage": "rust:1-slim" },
+  "http": { "host": "127.0.0.1", "port": 8747 },
+  "tunnel": {
+    "mode": "off",
+    "command": "cloudflared",
+    "name": null,
+    "configFile": null,
+    "publicBaseUrl": null
+  },
+  "lifecycle": { "restart": true, "restartDelayMs": 2000, "healthTimeoutMs": 30000, "logFile": null },
+  "permissions": {
+    "default": "allow",
+    "actions": {
+      "fs.mutate": "ask",
+      "remote.exec": "ask",
+      "browser.input": "ask",
+      "saas.request": "ask"
+    }
+  },
+  "sessionRetentionDays": 30
+}
