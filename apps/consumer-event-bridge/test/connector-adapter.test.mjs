@@ -1,0 +1,14 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {registerConsumerEventBridgeTools,makeBridgeProxy,CONSUMER_EVENT_BRIDGE_URI} from '../../../src/tools/consumer-event-bridge.js';
+function mock(){const calls=[];const fetcher=async(_u,init)=>{const input=JSON.parse(init.body);calls.push(input);let result;if(input.method==='resources/read')result={contents:[{uri:'ui://consumer-event-bridge/panel.html',text:'<script>consumer_event_session</script>',mimeType:'text/html;profile=mcp-app'}]};else if(input.params.name==='consumer_event_bridge')result={content:[{type:'text',text:'Open bounded UI'}],structuredContent:{mode:'live_widget_only'}};else result={content:[],structuredContent:{state:'waiting'}};return {ok:true,json:async()=>({jsonrpc:'2.0',id:1,result})}};return {calls,fetcher}}
+test('optional registration does not alter base Connector when no endpoint configured',()=>{const regs=[];const server={registerResource(){throw Error('should be disabled')}};assert.equal(registerConsumerEventBridgeTools((...a)=>regs.push(a),server,{url:null}),false);assert.equal(regs.length,0)});
+test('bridge registration reuses existing Connector and never sends model requests',async()=>{const {calls,fetcher}=mock();const regs=new Map(),resources=new Map();const reg=(name,meta,handler)=>regs.set(name,{meta,handler});const server={registerResource(name,uri,meta,fn){resources.set(name,{uri,meta,fn})}};
+assert.equal(registerConsumerEventBridgeTools(reg,server,{url:'http://127.0.0.1:18797/mcp',fetcher}),true);assert.deepEqual([...regs.keys()],['consumer_event_bridge','consumer_event_session']);
+assert.equal(regs.get('consumer_event_bridge').meta._meta.ui.resourceUri,CONSUMER_EVENT_BRIDGE_URI);
+const ui=await resources.get('webjjonku-consumer-event-bridge').fn();assert.equal(ui.contents[0].uri,CONSUMER_EVENT_BRIDGE_URI);
+const opened=await regs.get('consumer_event_bridge').handler({});assert.equal(opened.structuredContent.mode,'live_widget_only');
+const session=await regs.get('consumer_event_session').handler({action:'poll',session:'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa'});assert.equal(session.structuredContent.state,'waiting');
+assert.deepEqual(calls.map(x=>x.method),['resources/read','tools/call','tools/call']);assert.ok(calls.every(x=>!JSON.stringify(x).includes('sampling/createMessage')));
+});
+test('proxy URL rejects unsafe schemes, embedded credentials and other paths',()=>{for(const url of ['http://example.com/v03/mcp','file:///v03/mcp','https://user:pass@example.com/v03/mcp','https://example.com/admin','https://example.com/v03/mcp?q=1'])assert.throws(()=>makeBridgeProxy({url}));});
+test('backend errors cannot fabricate host receipts',async()=>{const p=makeBridgeProxy({url:'http://127.0.0.1:18797/mcp',fetcher:async()=>({ok:false,status:503})});await assert.rejects(()=>p.session({action:'arm'}),/HTTP 503/)});

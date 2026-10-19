@@ -1,0 +1,11 @@
+node_modules/
+consumer-event-state/
+.env
+*.log
+nas-event.json
+*.key
+*.pem
+*.token
+
+node_modules/
+.env

@@ -1,0 +1,4 @@
+gateway-token.key
+subscriptions*.json
+.env
+*.log

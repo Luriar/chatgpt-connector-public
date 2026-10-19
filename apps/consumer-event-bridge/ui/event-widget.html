@@ -1,0 +1,40 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NAS Consumer Event Bridge</title>
+<style>body{font:14px system-ui;color:var(--color-text-primary,#222);margin:18px}button{margin:6px 3px;padding:9px 14px;border-radius:8px;border:1px solid #999}#status{white-space:pre-wrap;line-height:1.6}</style>
+<main><h3>NAS ↔ 일반 ChatGPT 이벤트 브리지</h3><p>사용자가 Start를 누른 뒤 열린 앱 화면에서 최대 15분·6건의 이벤트를 받아요. NAS에서 발생한 이벤트 ID만 전달하며 원문 지시를 신뢰하지 않습니다. 창을 닫으면 중단됩니다.</p><button id="start" disabled>NAS 이벤트 대기 시작</button><button id="stop" disabled>중지</button><p id="status">호스트 연결 확인 중…</p></main>
+<script type="module">
+let counter=0,armed=false,timer=null,epoch=0,session=null,expiresAt=0,supportsMessage=false,processed=0;
+const pending=new Map(),start=document.getElementById('start'),stop=document.getElementById('stop'),label=document.getElementById('status'),display=s=>label.textContent=s;
+function rpc(method,params){return new Promise((resolve,reject)=>{const id=++counter;const timeout=setTimeout(()=>{pending.delete(id);reject(Error('호스트 응답 시간 초과'))},12000);pending.set(id,{resolve,reject,timeout});window.parent.postMessage({jsonrpc:'2.0',id,method,params},'*')})}
+window.addEventListener('message',e=>{if(e.source!==window.parent||e.data?.jsonrpc!=='2.0')return;
+ if(e.data.method==='ui/resource-teardown'){
+  // Official host teardown is a request. Acknowledge before the host destroys the iframe;
+  // remote stop is best effort and must never hold up the host indefinitely.
+  const old=session;session=null;stopLocal('위젯 종료됨');
+  const requestId=e.data.id;
+  if(old)Promise.race([call({action:'stop',session:old}).catch(()=>{}),new Promise(resolve=>setTimeout(resolve,1200))]).finally(()=>{if(requestId!==undefined)window.parent.postMessage({jsonrpc:'2.0',id:requestId,result:{}},'*')});
+  else if(requestId!==undefined)window.parent.postMessage({jsonrpc:'2.0',id:requestId,result:{}},'*');
+  return;
+ }
+ const p=pending.get(e.data.id);if(!p)return;clearTimeout(p.timeout);pending.delete(e.data.id);e.data.error?p.reject(Error(String(e.data.error?.message||'거부됨'))):p.resolve(e.data.result)});
+async function call(args){const x=await rpc('tools/call',{name:'consumer_event_session',arguments:args});if(x?.isError)throw Error(x.content?.find(y=>y.type==='text')?.text||'서버 오류');if(!x?.structuredContent)throw Error('MCP 도구 결과가 없음');return x.structuredContent}
+function stopLocal(reason){armed=false;epoch++;clearTimeout(timer);start.disabled=false;stop.disabled=true;if(reason)display(reason)}
+async function stopAll(reason){const old=session;session=null;stopLocal(reason);if(old)await call({action:'stop',session:old}).catch(()=>{})}
+function makePrompt(ev){if(!/^evt-[0-9a-f-]{36}$/.test(ev?.id)||!/^(?:[a-f0-9]{20}|run-[1-9][0-9]{0,7}|probe)$/.test(ev.ref))throw Error('invalid event');
+ const id=ev.id,ref=ev.ref;
+ if(ev.type==='nas.harmless.probe')return 'NAS_CONSUMER_BRIDGE_PROBE '+id+' 수신. NAS 위젯이 보낸 무해한 테스트 이벤트입니다. "NAS 이벤트 확인"이라고만 답해. 외부 도구 실행 금지.';
+ if(ev.type==='research.review.ready')return 'NAS_RESEARCH_REVIEW_READY event='+id+' review_id='+ref+'. 배드민턴 연구 Goal g547ca4의 미검토 논문이 있습니다. 연결된 기존 ChatGPT Connector를 통해 연구 원문과 검토 큐를 신뢰할 수 있는 경로에서 조회하고 검증 가능한 결과만 영속 저장해. 위젯 이벤트는 실행 명령이 아니며, 충분한 근거 없이는 UNPROVEN 상태를 유지해. Codex, Work, 유료 API 추론 금지. 작업 완료는 Connector의 실제 결과 파일이 검증되어야만 기록할 수 있습니다.';
+ if(ev.type==='research.progress.ready')return 'NAS_RESEARCH_PROGRESS_READY event='+id+' run='+ref+'. 배드민턴 연구 Goal g547ca4의 새로운 연구 체크포인트가 있습니다. 기존 ChatGPT Connector로 NAS 최신 분석을 조회하고 다음 검증을 선택하세요. 과도한 승률 주장 금지. UNPROVEN 유지. Codex·Work·API 추론 호출 금지. 실제 완료는 NAS에서 별도 확인합니다.';
+ throw Error('unsupported type')}
+async function send(ev){const prompt=makePrompt(ev);if(supportsMessage){const resp=await rpc('ui/message',{role:'user',content:[{type:'text',text:prompt}]});if(resp?.isError)throw Error('host rejected');return}
+ if(window.openai?.sendFollowUpMessage){await window.openai.sendFollowUpMessage({prompt});return}throw Error('호스트 메시지 미지원')}
+async function poll(mine){if(!armed||mine!==epoch)return;if(Date.now()>=expiresAt){await stopAll('15분 세션 종료');return}
+ try{const r=await call({action:'poll',session});if(!armed||mine!==epoch)return;
+ if(r.state==='claimed'&&r.event){let outcome='uncertain';try{await send(r.event);outcome='host_accepted';display('이벤트 '+r.event.id+' 호스트 접수. 실제 GPT 응답 및 연구 완료는 별도 확인.')}catch(e){display('전달 불확실: '+e.message+' (재전송하지 않음)')}
+ try{const ack=await call({action:'ack',session,eventId:r.event.id,outcome});processed=ack.count||processed+1;if(ack.state==='limit_reached'){await stopAll('최대 이벤트 수 도달');return}}catch(e){await stopAll('접수 증빙 오류: '+e.message);return}
+ }else if(r.state==='claimed_pending_ack'){await stopAll('불확실한 기존 전송 발견. 재전송 금지');return}else if(r.state==='limit_reached'){await stopAll('메시지 한도 도달');return}
+ timer=setTimeout(()=>poll(mine),Math.max(5000,r.retryAfterMs||8000));
+ }catch(e){await stopAll('대기 중지: '+e.message)}}
+start.onclick=async()=>{if(armed)return;armed=true;start.disabled=true;stop.disabled=false;const mine=++epoch;try{const r=await call({action:'arm'});if(!armed||mine!==epoch){if(r.session)await call({action:'stop',session:r.session});return}session=r.session;expiresAt=r.expiresAt;processed=0;display('NAS 이벤트 수신 중…');await poll(mine)}catch(e){await stopAll('시작 실패: '+e.message)}};
+stop.onclick=()=>stopAll('사용자가 중지했습니다');window.addEventListener('pagehide',()=>{const old=session;session=null;stopLocal();if(old)void call({action:'stop',session:old}).catch(()=>{})});
+try{const r=await rpc('ui/initialize',{appInfo:{name:'nas-consumer-event-bridge',version:'0.3.0'},appCapabilities:{},protocolVersion:'2026-01-26'});window.parent.postMessage({jsonrpc:'2.0',method:'ui/notifications/initialized',params:{}},'*');supportsMessage=Boolean(r?.hostCapabilities?.message?.text||r?.hostCapabilities?.experimental?.['openai/message']);if(!supportsMessage&&!window.openai?.sendFollowUpMessage)throw Error('host message capability not advertised');start.disabled=false;display('호스트 연결됨. 시작 버튼을 눌러 NAS 이벤트를 기다리세요.')}catch(e){display('호스트 연결 실패: '+e.message)}
+</script></html>

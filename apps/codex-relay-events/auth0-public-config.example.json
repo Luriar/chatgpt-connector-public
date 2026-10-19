@@ -1,0 +1,19 @@
+{
+    "tenant":  "your-tenant",
+    "issuer":  "https://auth.example.invalid/",
+    "jwks_uri":  "https://auth.example.invalid/.well-known/jwks.json",
+    "audience":  "https://mcp.example.invalid/relay-events/mcp",
+    "oauth_authorization_endpoint":  "https://auth.example.invalid/authorize",
+    "oauth_token_endpoint":  "https://auth.example.invalid/oauth/token",
+    "scopes":  [
+                   "relay:events.read",
+                   "relay:events.subscribe"
+               ],
+    "allowed_user_subject":  "SET_AFTER_FIRST_AUTH0_LOGIN",
+    "enabled":  false,
+    "callbacks_enabled":  false,
+    "public_https_route_enabled":  false,
+    "client_id":  "REPLACE_WITH_OAUTH_CLIENT_ID",
+    "client_type":  "third_party_strict",
+    "oidc_compatibility":  "requires explicit plugin oidc configuration before connection"
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@webjjonku/codex-relay-events",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node relay-events-gateway.mjs --self-test && node oauth-resource-adapter.mjs --self-test",
+    "gateway": "node relay-events-gateway.mjs",
+    "oauth": "node oauth-resource-adapter.mjs"
+  }
+}

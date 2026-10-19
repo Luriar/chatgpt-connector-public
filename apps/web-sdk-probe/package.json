@@ -1,0 +1,14 @@
+{
+  "name": "@webjjonku/web-sdk-probe",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node nas-event-server.mjs",
+    "test": "node --test *.test.mjs",
+    "produce": "node nas-event-producer.mjs"
+  }
+}

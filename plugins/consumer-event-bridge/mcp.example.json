@@ -1,0 +1,9 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "consumer-event-bridge-v03": {
+      "type": "streamable-http",
+      "url": "https://mcp.example.invalid/v03/mcp"
+    }
+  }
+}

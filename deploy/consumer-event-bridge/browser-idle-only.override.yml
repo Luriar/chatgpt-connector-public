@@ -1,0 +1,6 @@
+services:
+  browser-nas:
+    image: deploy-browser-nas:beta5-on-demand-20261018
+    environment:
+      WEBJJONKU_BROWSER_KEEP_OPEN: '1'
+      WEBJJONKU_BROWSER_IDLE_CLOSE_MS: '2500'

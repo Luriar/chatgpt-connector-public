@@ -1,0 +1,24 @@
+# Optional addition to NAS deploy/nas-compose.yml. Browser launches for each queued task,
+# then exits after the idle window; the worker itself remains available without Chromium.
+services:
+  browser-nas:
+    image: ${WEBJJONKU_EVENT_BROWSER_IMAGE:?set compatible browser image}
+    environment:
+      WEBJJONKU_BROWSER_KEEP_OPEN: '1'
+      WEBJJONKU_BROWSER_IDLE_CLOSE_MS: '2500'
+  consumer-browser-trigger:
+    image: ${WEBJJONKU_EVENT_CONNECTOR_IMAGE:?set compatible connector image}
+    restart: unless-stopped
+    depends_on: [coordinator,browser-nas]
+    environment:
+      WEBJJONKU_COORDINATOR_URL: http://coordinator:8765
+      WEBJJONKU_COORDINATOR_TOKEN: ${WEBJJONKU_BROWSER_NAS_TOKEN}
+      CONSUMER_EVENT_DATA: /data
+      CONSUMER_BROWSER_CHAT_URL: ${CONSUMER_BROWSER_CHAT_URL:-}
+      CONSUMER_BROWSER_ENABLED: ${CONSUMER_BROWSER_ENABLED:-0}
+      CONSUMER_BROWSER_PROBE_ONLY: '1'
+    volumes:
+      - ${CONSUMER_EVENT_DATA_HOST:?Set_NAS_bridge_state_mount}:/data
+      - ${CONSUMER_EVENT_SOURCE_ROOT:?Set_absolute_source_folder}:/app/consumer-bridge:ro
+    command: ['node','/app/consumer-bridge/scripts/watch-browser-events.mjs']
+    networks: [worknet]

@@ -1,0 +1,20 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {spawn} from 'node:child_process';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {createStore} from '../src/event-store.mjs';
+test('live local MCP HTTP protocol, multiple pending events and bounded session', {timeout:18000},async t=>{
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'consumer-event-http-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));const port=18827;const child=spawn(process.execPath,[new URL('../src/server.mjs',import.meta.url).pathname],{env:{...process.env,CONSUMER_EVENT_DATA:root,CONSUMER_EVENT_PORT:String(port)},stdio:['ignore','pipe','pipe']});let err='';child.stderr.on('data',d=>err+=d);t.after(()=>child.kill('SIGTERM'));
+await new Promise((resolve,reject)=>{const timeout=setTimeout(()=>reject(Error('startup timeout '+err)),6500);child.stdout.on('data',b=>{if(String(b).includes('consumer_bridge_ready')){clearTimeout(timeout);resolve()}});child.once('exit',code=>{clearTimeout(timeout);reject(Error('exit '+code+' '+err))})});
+const rpc=async(method,params={})=>{const res=await fetch(`http://127.0.0.1:${port}/mcp`,{method:'POST',headers:{'content-type':'application/json',accept:'application/json,text/event-stream'},body:JSON.stringify({jsonrpc:'2.0',id:8,method,params})});assert.equal(res.status,200);const x=await res.json();assert.equal(x.error,undefined);return x.result};
+const health=await fetch(`http://127.0.0.1:${port}/healthz`).then(x=>x.json());assert.equal(health.inference,false);
+await rpc('initialize',{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'test',version:'1'}});
+const listed=await rpc('tools/list');assert.equal(listed.tools.length,2);
+const initial=await rpc('tools/call',{name:'consumer_event_bridge',arguments:{}});assert.equal(initial.structuredContent.closed_window_supported,false);
+const ui=await rpc('resources/read',{uri:'ui://consumer-event-bridge/panel.html'});assert.match(ui.contents[0].text,/research\.review\.ready/);
+const store=createStore(root);const a=store.publish({type:'research.review.ready',ref:'a'.repeat(20)}),b=store.publish({type:'research.progress.ready',ref:'run-200'});
+const arm=(await rpc('tools/call',{name:'consumer_event_session',arguments:{action:'arm'}})).structuredContent;assert.equal(arm.maxMessages,6);
+const poll=(await rpc('tools/call',{name:'consumer_event_session',arguments:{action:'poll',session:arm.session}})).structuredContent;assert.ok([a.id,b.id].includes(poll.event.id));const firstId=poll.event.id,secondId=firstId===a.id?b.id:a.id;
+const dupe=(await rpc('tools/call',{name:'consumer_event_session',arguments:{action:'poll',session:arm.session}})).structuredContent;assert.equal(dupe.state,'claimed_pending_ack');
+const ack=(await rpc('tools/call',{name:'consumer_event_session',arguments:{action:'ack',session:arm.session,eventId:firstId,outcome:'host_accepted'}})).structuredContent;assert.equal(ack.completed,false);
+const cool=(await rpc('tools/call',{name:'consumer_event_session',arguments:{action:'poll',session:arm.session}})).structuredContent;assert.equal(cool.state,'cooldown');assert.ok(cool.retryAfterMs>55000&&cool.retryAfterMs<=60000);
+assert.equal(store.status().accepted,1);assert.equal(store.next().id,secondId);assert.equal(store.status().completed,0);
+const denied=await fetch(`http://127.0.0.1:${port}/mcp`,{headers:{origin:'https://bad.example'}});assert.equal(denied.status,404);
+const stopper=(await rpc('tools/call',{name:'consumer_event_session',arguments:{action:'stop',session:arm.session}})).structuredContent;assert.equal(stopper.state,'stopped');
+});

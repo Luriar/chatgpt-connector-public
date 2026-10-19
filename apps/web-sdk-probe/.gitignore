@@ -1,0 +1,4 @@
+node_modules/
+nas-event.json
+*.log
+.env

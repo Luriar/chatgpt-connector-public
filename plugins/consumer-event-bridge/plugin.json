@@ -1,0 +1,24 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "author": {
+    "name": "Luriar"
+  },
+  "description": "Private NAS-only official MCP Apps host test; click-arm bounded multi-event delivery. No Codex, Work, or paid API.",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "capabilities": [
+          "Interactive"
+        ],
+        "category": "Productivity",
+        "defaultPrompt": "Open the consumer_event_bridge inline UI in ordinary ChatGPT GPT-6. Start only when the user clicks. Test two harmless NAS events; no Codex, Work, API, or untrusted commands.",
+        "developerName": "Luriar",
+        "displayName": "Webjjonku Consumer Event Bridge v0.3",
+        "longDescription": "NAS-only durable event queue and user-armed MCP Apps host follow-up experiment. Does not wake a closed ChatGPT browser. A live widget must be started by the user. Only bounded harmless testing should be done before real research integration.",
+        "shortDescription": "Consumer Event Bridge"
+      }
+    }
+  },
+  "name": "webjjonku-consumer-event-bridge-v03",
+  "version": "0.3.0"
+}

@@ -1,0 +1,4 @@
+# Optional browser-nas only, preserving /browser-profile volume and all other services.
+services:
+  browser-nas:
+    image: ${WEBJJONKU_ROUTE_GUARD_IMAGE:?set browser route guard image}

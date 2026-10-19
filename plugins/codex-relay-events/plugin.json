@@ -1,0 +1,9 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "author": {
+    "name": "Luriar"
+  },
+  "description": "Private development MCP Events gateway for an OAuth-protected single-user Codex relay. Event delivery remains disabled.",
+  "name": "codex-relay-events-dev",
+  "version": "0.1.0"
+}

@@ -1,0 +1,7 @@
+# Optional only: add to existing deployment compose stack after staging verification.
+# Never run this file on its own; production Coordinator/worker compose stays intact.
+services:
+  connector:
+    image: ${WEBJJONKU_CONSUMER_CONNECTOR_IMAGE:?set derived image tag}
+    environment:
+      WEBJJONKU_CONSUMER_EVENT_BRIDGE_URL: ${WEBJJONKU_CONSUMER_EVENT_BRIDGE_URL:?set trusted HTTPS MCP URL}

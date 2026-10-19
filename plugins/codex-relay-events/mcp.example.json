@@ -1,0 +1,32 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "relay-events": {
+      "type": "streamable-http",
+      "url": "https://mcp.example.invalid/relay-events/mcp",
+      "extensions": {
+        "com.openai": {
+          "auth": {
+            "type": "oauth",
+            "client": {
+              "mode": "provided",
+              "clientId": "REPLACE_WITH_OAUTH_CLIENT_ID",
+              "tokenEndpointAuthMethod": "client_secret_basic"
+            },
+            "authorizationServerBase": "https://auth.example.invalid/",
+            "authorizationUrl": "https://auth.example.invalid/authorize",
+            "tokenUrl": "https://auth.example.invalid/oauth/token",
+            "resource": "https://mcp.example.invalid/relay-events/mcp",
+            "baseScopes": [
+              "relay:events.read",
+              "relay:events.subscribe"
+            ],
+            "defaultScopes": [],
+            "oidcEnabled": false,
+            "oidcScopesSupported": []
+          }
+        }
+      }
+    }
+  }
+}

@@ -22,7 +22,9 @@
     "test:delegation": "node scripts/delegation-protocol-test.js",
     "test:security": "node scripts/self-review-security-test.js && node scripts/state-concurrency-test.js && node scripts/state-durability-test.js && node scripts/coordinator-durability-test.js && node scripts/coordinator-runat-resume-regression-test.js && node scripts/work-policy-test.js && node scripts/scheduler-resilience-test.js && node scripts/session-resource-lock-test.js",
     "validate:external": "node scripts/astra-external-validation.js",
-    "tunnel": "node scripts/tunnel.js"
+    "tunnel": "node scripts/tunnel.js",
+    "test:plugins": "node scripts/optional-plugins-test.mjs",
+    "plugin:package:optional": "node scripts/package-optional-plugins.mjs"
   },
   "engines": {
     "node": ">=20"

@@ -18,6 +18,7 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm test
       - run: npm run test:security
+      - run: npm run test:plugins
       - name: Scan public history for secrets
         env:
           GITLEAKS_VERSION: 8.30.1

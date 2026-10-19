@@ -1,0 +1,24 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "author": {
+    "name": "Luriar"
+  },
+  "description": "NAS-hosted private web-only, click-armed MCP Apps followup test. No Codex, file access or paid API calls.",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "capabilities": [
+          "Interactive"
+        ],
+        "category": "Productivity",
+        "defaultPrompt": "Open the web_sdk_probe inline UI in ordinary ChatGPT web. This NAS-hosted experiment only sends at most two harmless messages after one click. Do not call Codex, Work, paid API, or access files.",
+        "developerName": "Luriar",
+        "displayName": "Webjjonku Web SDK Probe",
+        "longDescription": "A NAS-only, official MCP Apps SDK host follow-up test. Requires explicit start click; tests whether a second host message can start regular ChatGPT inference. Does not access files, Codex, Work, or paid APIs.",
+        "shortDescription": "Web SDK Probe"
+      }
+    }
+  },
+  "name": "webjjonku-web-sdk-safe-probe",
+  "version": "0.1.1"
+}

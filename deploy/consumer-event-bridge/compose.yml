@@ -1,0 +1,50 @@
+# Isolated optional deployment. Does not replace production chatgpt-connector.
+# Prepare EVENT_STATE_DIR as a private writable folder owned by UID/GID 1000.
+# Keep ChatGPT MCP host page open; no consumer model is launched by this container.
+services:
+  consumer-event-bridge:
+    build:
+      context: ../..
+      dockerfile: deploy/consumer-event-bridge/Dockerfile
+    network_mode: host
+    restart: unless-stopped
+    read_only: true
+    user: '1000:1000'
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    mem_limit: 128m
+    pids_limit: 64
+    cpus: 0.25
+    environment:
+      CONSUMER_EVENT_DATA: /data
+      CONSUMER_EVENT_PORT: '${CONSUMER_EVENT_PORT:-18797}'
+      CONSUMER_EVENT_HOST: 127.0.0.1
+    volumes:
+      - ${EVENT_STATE_DIR:?set private absolute EVENT_STATE_DIR}:/data:rw
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=4m
+
+  consumer-research-watcher:
+    profiles: [research]
+    build:
+      context: ../..
+      dockerfile: deploy/consumer-event-bridge/Dockerfile
+    restart: unless-stopped
+    read_only: true
+    network_mode: none
+    user: '1000:1000'
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    mem_limit: 96m
+    pids_limit: 64
+    cpus: 0.15
+    command: ['node','src/watch-research.mjs']
+    environment:
+      CONSUMER_EVENT_DATA: /data
+      CONSUMER_RESEARCH_ROOT: /research
+      CONSUMER_RESEARCH_POLL_MS: '60000'
+    volumes:
+      - ${EVENT_STATE_DIR:?set private absolute EVENT_STATE_DIR}:/data:rw
+      - ${RESEARCH_ROOT:?set absolute RESEARCH_ROOT}:/research:ro
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=4m

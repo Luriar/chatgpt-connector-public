@@ -23,3 +23,7 @@ Checked on 2026-10-19 in a clean Linux environment:
 - Personal career files, private host addresses, access domains, hostnames and private Git history excluded.
 
 These checks do not certify live Windows, browser sessions, Docker deployment or cross-host production E2E. The included CI workflow has not yet run on GitHub.
+
+## Optional modules
+
+Consumer Event Bridge, Web SDK Probe and Codex Relay Events sources and portable plugin examples were added on 2026-10-19. Optional-module verification passed 67 tests plus gateway/OAuth self-tests; the default Connector smoke passed 40/40. No live host messages, callbacks, app installations or runtime deployment were performed by this source publication.

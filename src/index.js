@@ -55,6 +55,7 @@ import { registerResourceLockTools } from "./tools/resource-locks.js";
 import { registerDelegationTools } from "./tools/delegation.js";
 import { releaseSessionResources } from "./resource-locks.js";
 import { registerImageDeliveryUi } from "./ui/image-delivery.js";
+import { registerConsumerEventBridgeTools } from "./tools/consumer-event-bridge.js";
 import { artifactDeliveryHeaders } from "./artifact-download.js";
 import { makeWorkspaceAwareConfig } from "./workspaces.js";
 import { registerWorkspaceTools } from "./tools/workspaces.js";
@@ -119,6 +120,7 @@ function buildServer(sessionRef={id:null,scoped:false}) {
   registerWorkFacadeTools(reg, serverCtx);
   registerUiWatchdogTools(reg, serverCtx);
   registerImageDeliveryUi(server);
+  registerConsumerEventBridgeTools(reg,server);
   return server;
 }
 

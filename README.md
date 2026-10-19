@@ -65,3 +65,9 @@ node scripts/count-tools.js
 - [공개 배포 관리](PUBLICATION.md)
 
 VM 기능의 Alpine rootfs는 공개본에 동봉하지 않습니다. 필요한 rootfs를 직접 준비하고 `vm_prepare`의 `rootfs_tar`로 지정합니다. 일반 Connector 실행에는 필요하지 않습니다.
+
+## 추가 플러그인 소스
+
+Consumer Event Bridge v0.3, Web SDK Probe, Codex Relay Events의 서버와 UI 소스, 테스트, 플러그인 정의 및 연결 예제가 포함되어 있습니다. [플러그인 구성과 패키징](plugins/README.md)을 확인합니다.
+
+각 플러그인은 선택 구성입니다. 실제 개인 접속 주소와 OAuth 설정은 포함하지 않으며, 소스 추가로 설치된 플러그인이나 운영 서비스가 바뀌지 않습니다. Node.js 22 이상에서 `npm run test:plugins`로 로컬 검증을 실행합니다.
