@@ -4,6 +4,21 @@ Windows PC와 NAS의 파일, 명령 실행, 브라우저, Windows UI, 문서 작
 
 이 저장소는 공개 배포용 소스입니다. 버전은 **2.1.0-beta.5**이며 개인 운영 설정, 취업 자료, 런타임 상태와 기존 개발 커밋 이력은 포함하지 않습니다. OpenAI 공식 제품이 아닙니다.
 
+## 시스템 구성
+
+```mermaid
+flowchart TD
+    C["MCP 클라이언트"] --> P["Connector / 권한 정책"]
+    P --> N["NAS Coordinator"]
+    N --> W["Windows worker"]
+    N --> B["Browser worker"]
+    N --> S["Task / Goal / 체크포인트"]
+```
+
+[구성 개요 및 기존 검증 기록](docs/V2.md) | [설치와 배포](docs/SETUP_GUIDE.md) | [문제 해결](docs/TROUBLESHOOTING.md)
+
+위 구성은 공개 코드의 역할을 설명한 것으로, 현재 모든 환경에서 연결 및 실행을 보장하는 것은 아닙니다.
+
 ## 포함 기능
 
 - 승인된 경로의 파일 읽기와 편집, 셸 실행, Git 및 프로젝트 작업
